@@ -1,11 +1,17 @@
 import { useEffect } from 'react';
 import { Scene } from './components/Scene';
 import { HUD } from './components/HUD';
+import { InteriorScene } from './components/InteriorScene';
+import { InteriorHUD } from './components/InteriorHUD';
 import { useGameStore } from './store/gameStore';
+import { useGameLoop } from './game/useGameLoop';
 import './App.css';
 
 function App() {
   const loadIfPresent = useGameStore((s) => s.loadIfPresent);
+  const view = useGameStore((s) => s.view);
+
+  useGameLoop();
 
   useEffect(() => {
     loadIfPresent();
@@ -19,8 +25,17 @@ function App() {
 
   return (
     <div className="game-root">
-      <Scene />
-      <HUD />
+      {view === 'city' ? (
+        <>
+          <Scene />
+          <HUD />
+        </>
+      ) : (
+        <>
+          <InteriorScene />
+          <InteriorHUD />
+        </>
+      )}
     </div>
   );
 }

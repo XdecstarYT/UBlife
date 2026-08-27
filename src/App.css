@@ -72,8 +72,39 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
   pointer-events: auto;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.hud-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.85);
+  padding-left: 4px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.hud-mode-btn:disabled {
+  cursor: not-allowed;
+}
+
+.hud-warning {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(224, 67, 58, 0.85);
+  padding: 6px 10px;
+  border-radius: 999px;
 }
 
 .hud-modes {

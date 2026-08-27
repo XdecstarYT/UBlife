@@ -23,7 +23,56 @@ export interface TruckState {
   cargo: number;
 }
 
-export type CustomerPhase = 'entering' | 'leaving-happy' | 'leaving-sad';
+export type PlaceMode = 'select' | 'road' | 'residential' | 'bulldoze';
+
+export type View = 'city' | 'store';
+
+// --- Phase 2: retail depth ---
+
+export type ProductCategory = 'grocery' | 'electronics' | 'clothing';
+
+export type PriceLevel = 'low' | 'normal' | 'high';
+
+export type StoreType = 'general' | 'boutique';
+
+export type InteriorItemType = 'shelf' | 'checkout' | 'decor';
+
+export interface ShelfContents {
+  category: ProductCategory;
+  stock: number;
+  capacity: number;
+}
+
+export interface InteriorTile {
+  type: InteriorItemType;
+  shelf?: ShelfContents; // present iff type === 'shelf'
+}
+
+export type InteriorPlaceMode =
+  | 'select'
+  | 'shelf-grocery'
+  | 'shelf-electronics'
+  | 'shelf-clothing'
+  | 'checkout'
+  | 'decor'
+  | 'bulldoze';
+
+export type StaffRole = 'stocker' | 'cashier';
+export type StaffTask = 'idle' | 'walking' | 'working';
+
+export interface StaffMember {
+  id: number;
+  role: StaffRole;
+  path: GridPos[];
+  segmentIndex: number;
+  segmentT: number;
+  task: StaffTask;
+  /** Stocker: shelf tile key currently targeted. Cashier: checkout tile key claimed. */
+  targetKey: string | null;
+  workTimer: number;
+}
+
+export type CustomerPhase = 'entering' | 'waiting' | 'leaving-happy' | 'leaving-sad';
 
 export interface CustomerState {
   id: number;
@@ -31,9 +80,9 @@ export interface CustomerState {
   path: GridPos[];
   segmentIndex: number;
   segmentT: number;
+  category: ProductCategory;
+  patience: number;
 }
-
-export type PlaceMode = 'select' | 'road' | 'residential' | 'bulldoze';
 
 export interface GameState {
   gridWidth: number;
@@ -45,11 +94,12 @@ export interface GameState {
   storePos: GridPos;
 
   mode: PlaceMode;
+  view: View;
 
   money: number;
+  /** Derived each tick from shelf contents — total units on display / total shelf capacity. */
   stock: number;
   maxStock: number;
-  pricePerItem: number;
   deliveryCapacity: number;
   truckSpeed: number; // tiles per second
 
@@ -61,4 +111,23 @@ export interface GameState {
   customerSpawnTimer: number;
 
   hasRoute: boolean;
+
+  // --- Store interior ---
+  interiorWidth: number;
+  interiorHeight: number;
+  interiorCellSize: number;
+  interiorTiles: Record<TileKey, InteriorTile>;
+  interiorMode: InteriorPlaceMode;
+  storeType: StoreType;
+  priceTiers: Record<ProductCategory, PriceLevel>;
+
+  /** Goods delivered by the truck, waiting to be shelved. */
+  backroomStock: number;
+  backroomCapacity: number;
+
+  staff: StaffMember[];
+  nextStaffId: number;
+
+  /** Seconds until the checkout can serve another customer. */
+  checkoutCooldown: number;
 }

@@ -55,6 +55,7 @@ export function HUD() {
   const truckPhase = useGameStore((s) => s.truck.phase);
   const save = useGameStore((s) => s.save);
   const resetGame = useGameStore((s) => s.resetGame);
+  const setView = useGameStore((s) => s.setView);
 
   const stockRatio = maxStock > 0 ? stock / maxStock : 0;
 
@@ -63,7 +64,7 @@ export function HUD() {
       <div className="hud-top">
         <div className="hud-stat">
           <span className="hud-stat-label">Money</span>
-          <span className="hud-stat-value">${money}</span>
+          <span className="hud-stat-value">${Math.floor(money)}</span>
         </div>
 
         <div className="hud-stat hud-stat-grow">
@@ -106,6 +107,9 @@ export function HUD() {
           ))}
         </div>
         <div className="hud-actions">
+          <button className="hud-action-btn" onClick={() => setView('store')}>
+            🏬 Manage Store
+          </button>
           <button className="hud-action-btn" onClick={() => save()}>
             💾 Save
           </button>

@@ -1,5 +1,7 @@
 import { useGameStore } from '../store/gameStore';
 import { gridToWorld } from '../game/grid';
+import { STORE_TYPES } from '../game/retail';
+import { findCheckoutKeys } from '../game/interior';
 
 export function Buildings() {
   const warehousePos = useGameStore((s) => s.warehousePos);
@@ -9,10 +11,14 @@ export function Buildings() {
   const cellSize = useGameStore((s) => s.cellSize);
   const stock = useGameStore((s) => s.stock);
   const maxStock = useGameStore((s) => s.maxStock);
+  const storeType = useGameStore((s) => s.storeType);
+  const hasCheckout = useGameStore((s) => findCheckoutKeys(s.interiorTiles).length > 0);
+  const setView = useGameStore((s) => s.setView);
 
   const warehouseWorld = gridToWorld(warehousePos, gridWidth, gridHeight, cellSize);
   const storeWorld = gridToWorld(storePos, gridWidth, gridHeight, cellSize);
   const stockRatio = maxStock > 0 ? stock / maxStock : 0;
+  const wallColor = hasCheckout ? STORE_TYPES[storeType].wallColor : '#8a8a8a';
 
   return (
     <group>
@@ -30,9 +36,16 @@ export function Buildings() {
 
       {/* Store */}
       <group position={storeWorld}>
-        <mesh position={[0, 0.75, 0]} castShadow>
+        <mesh
+          position={[0, 0.75, 0]}
+          castShadow
+          onClick={(e) => {
+            e.stopPropagation();
+            setView('store');
+          }}
+        >
           <boxGeometry args={[1.8, 1.5, 1.8]} />
-          <meshStandardMaterial color="#d94f4f" />
+          <meshStandardMaterial color={wallColor} />
         </mesh>
         <mesh position={[0, 1.55, 0]}>
           <boxGeometry args={[2, 0.15, 2]} />

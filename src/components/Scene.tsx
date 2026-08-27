@@ -6,7 +6,6 @@ import { Tiles } from './Tiles';
 import { Buildings } from './Buildings';
 import { Truck } from './Truck';
 import { Customers } from './Customers';
-import { GameLoop } from './GameLoop';
 
 export function Scene() {
   return (
@@ -30,7 +29,6 @@ export function Scene() {
       <Buildings />
       <Truck />
       <Customers />
-      <GameLoop />
 
       <OrbitControls
         makeDefault
