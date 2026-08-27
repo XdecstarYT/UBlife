@@ -4,6 +4,8 @@ import type { PlaceMode } from '../game/types';
 import { COMMERCIAL_COST, INDUSTRIAL_COST, RAIL_COST, ROAD_COST, RESIDENTIAL_COST } from '../game/constants';
 import { BusinessHUD } from './BusinessHUD';
 import { NotificationToasts } from './NotificationToasts';
+import { CelebrationBanner } from './CelebrationBanner';
+import { shareEmpireSnapshot } from '../game/snapshot';
 
 const MODES: { id: PlaceMode; label: string; cost?: number }[] = [
   { id: 'road', label: '🛣️ Road', cost: ROAD_COST },
@@ -111,13 +113,35 @@ export function HUD() {
   const save = useGameStore((s) => s.save);
   const resetGame = useGameStore((s) => s.resetGame);
   const setView = useGameStore((s) => s.setView);
+  const notify = useGameStore((s) => s.notify);
   const [showBusiness, setShowBusiness] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const s = useGameStore.getState();
+      const result = await shareEmpireSnapshot({
+        netWorth: s.money - s.loanBalance,
+        day: s.dayNumber,
+        reputation: s.reputation,
+        storeCount: 1 + s.satelliteStores.length,
+      });
+      if (result === 'shared') notify('📸 Empire snapshot shared!');
+      else if (result === 'downloaded') notify('📸 Snapshot saved to your device.');
+      else if (result === 'failed') notify('Could not capture a snapshot — try again.');
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const stockRatio = maxStock > 0 ? stock / maxStock : 0;
 
   return (
     <div className="hud-root">
       <NotificationToasts />
+      <CelebrationBanner />
       {showBusiness && <BusinessHUD onClose={() => setShowBusiness(false)} />}
 
       <div className="hud-top">
@@ -177,6 +201,9 @@ export function HUD() {
           </button>
           <button className="hud-action-btn" onClick={() => setShowBusiness(true)}>
             📊 Business
+          </button>
+          <button className="hud-action-btn" onClick={handleShare} disabled={sharing}>
+            {sharing ? '📸 …' : '📸 Share'}
           </button>
           <button className="hud-action-btn" onClick={() => save()}>
             💾 Save

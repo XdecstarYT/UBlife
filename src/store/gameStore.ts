@@ -35,6 +35,8 @@ import {
   warehouseCandidates,
 } from '../game/logistics';
 import { CAMPAIGNS, RIVAL_STANCE_ATTRACTIVENESS, initialRivals, levelFromExperience } from '../game/business';
+import { checkNewMilestones, popCelebrationQueue } from '../game/milestones';
+import { useLeaderboardStore } from './leaderboardStore';
 import {
   BACKROOM_CAPACITY,
   BACKROOM_POS,
@@ -118,6 +120,8 @@ interface GameActions {
   takeLoan: (amount: number) => void;
   repayLoan: (amount: number) => void;
   startCampaign: (kind: CampaignKind) => void;
+  dismissCelebration: () => void;
+  notify: (text: string) => void;
   tick: (dt: number) => void;
   save: () => void;
   loadIfPresent: () => void;
@@ -221,6 +225,10 @@ function freshState(): GameState {
 
     notifications: [],
     nextNotificationId: 1,
+
+    milestones: {},
+    celebrationQueue: [],
+    activeCelebration: null,
   };
 }
 
@@ -522,6 +530,14 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         nextNotificationId: s.nextNotificationId + 1,
       };
     }),
+
+  dismissCelebration: () => set((s) => popCelebrationQueue(s.celebrationQueue)),
+
+  notify: (text) =>
+    set((s) => ({
+      notifications: [...s.notifications, { id: s.nextNotificationId, text }].slice(-MAX_NOTIFICATIONS),
+      nextNotificationId: s.nextNotificationId + 1,
+    })),
 
   tick: (dt) => {
     set((s) => {
@@ -1001,6 +1017,31 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         next.lostSalesToday = 0;
       }
 
+      // --- Celebration countdown: auto-advance to the next queued milestone when time's up ---
+      if (next.activeCelebration) {
+        const remaining = next.activeCelebration.remaining - dt;
+        if (remaining <= 0) {
+          Object.assign(next, popCelebrationQueue(next.celebrationQueue));
+        } else {
+          next.activeCelebration = { ...next.activeCelebration, remaining };
+        }
+      }
+
+      // --- Milestones: check for newly-crossed thresholds, queue a celebration ---
+      const newMilestones = checkNewMilestones(next);
+      if (newMilestones.length > 0) {
+        const updatedMilestones = { ...next.milestones };
+        for (const m of newMilestones) {
+          updatedMilestones[m.id] = true;
+          pushNotification(next, `🎉 Milestone: ${m.label}`);
+        }
+        next.milestones = updatedMilestones;
+        next.celebrationQueue = [...next.celebrationQueue, ...newMilestones.map((m) => m.id)];
+        if (!next.activeCelebration) {
+          Object.assign(next, popCelebrationQueue(next.celebrationQueue));
+        }
+      }
+
       return next;
     });
   },
@@ -1031,6 +1072,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       activeCampaign: s.activeCampaign,
       rivals: s.rivals,
       lostSalesToday: s.lostSalesToday,
+      milestones: s.milestones,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
@@ -1079,6 +1121,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           activeCampaign: payload.activeCampaign ?? null,
           rivals: Array.isArray(payload.rivals) ? payload.rivals : initialRivals(),
           lostSalesToday: typeof payload.lostSalesToday === 'number' ? payload.lostSalesToday : 0,
+          milestones: payload.milestones ?? {},
           stock: totals.stock,
           maxStock: totals.capacity,
         };
@@ -1091,6 +1134,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   resetGame: () => {
+    const s = get();
+    const madeProgress = s.dayNumber > 1 || s.money !== STARTING_MONEY || s.loanBalance > 0;
+    if (madeProgress) {
+      useLeaderboardStore.getState().addRun(s.money - s.loanBalance, s.dayNumber);
+    }
     try {
       localStorage.removeItem(SAVE_KEY);
     } catch {

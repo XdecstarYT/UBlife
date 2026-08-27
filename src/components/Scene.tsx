@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { GameCanvas } from './GameCanvas';
 import { SceneEffects } from './SceneEffects';
 import { SkyDome } from './SkyDome';
@@ -9,8 +11,11 @@ import { Buildings } from './Buildings';
 import { ZoneBuildings } from './ZoneBuildings';
 import { Vehicles } from './Vehicles';
 import { Customers } from './Customers';
+import { CameraDirector } from './CameraDirector';
 
 export function Scene() {
+  const controlsRef = useRef<OrbitControlsImpl | null>(null);
+
   return (
     <GameCanvas camera={{ position: [20, 19, 20], fov: 50 }}>
       <fog attach="fog" args={['#bcdcec', 32, 95]} />
@@ -35,8 +40,10 @@ export function Scene() {
       <ZoneBuildings />
       <Vehicles />
       <Customers />
+      <CameraDirector controlsRef={controlsRef} />
 
       <OrbitControls
+        ref={controlsRef}
         makeDefault
         enableDamping
         dampingFactor={0.15}

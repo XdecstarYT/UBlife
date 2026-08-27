@@ -13,6 +13,7 @@ import {
 } from '../game/constants';
 import { findCheckoutKeys } from '../game/interior';
 import { NotificationToasts } from './NotificationToasts';
+import { CelebrationBanner } from './CelebrationBanner';
 
 const STORE_TYPE_IDS: StoreType[] = ['general', 'boutique'];
 
@@ -72,6 +73,7 @@ export function InteriorHUD() {
   return (
     <div className="hud-root">
       <NotificationToasts />
+      <CelebrationBanner />
       <div className="hud-top">
         <button className="hud-action-btn" onClick={() => setView('city')}>
           ⬅ City

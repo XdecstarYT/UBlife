@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore';
+import { useLeaderboardStore } from '../store/leaderboardStore';
 import { CAMPAIGNS, RIVAL_STANCE_LABEL } from '../game/business';
 import { MAX_LOAN } from '../game/constants';
 import type { CampaignKind } from '../game/types';
@@ -48,9 +49,11 @@ export function BusinessHUD({ onClose }: { onClose: () => void }) {
   const takeLoan = useGameStore((s) => s.takeLoan);
   const repayLoan = useGameStore((s) => s.repayLoan);
   const startCampaign = useGameStore((s) => s.startCampaign);
+  const leaderboardEntries = useLeaderboardStore((s) => s.entries);
 
   const campaignKinds: CampaignKind[] = ['flyer', 'radio'];
   const recentDays = [...financeHistory].reverse().slice(0, 7);
+  const currentNetWorth = money - loanBalance;
 
   return (
     <div className="business-overlay" onClick={onClose}>
@@ -172,6 +175,39 @@ export function BusinessHUD({ onClose }: { onClose: () => void }) {
               </tbody>
             </table>
           )}
+        </div>
+
+        <div className="business-section">
+          <span className="hud-section-label">Your best runs</span>
+          {leaderboardEntries.length === 0 ? (
+            <span style={{ fontSize: 12, opacity: 0.7 }}>
+              No finished runs yet — this record fills in once you reset your empire.
+            </span>
+          ) : (
+            <table className="finance-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Net worth</th>
+                  <th>Day</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboardEntries.map((entry, i) => (
+                  <tr key={`${entry.date}-${i}`}>
+                    <td>{i + 1}</td>
+                    <td>${Math.round(entry.netWorth)}</td>
+                    <td>{entry.day}</td>
+                    <td>{new Date(entry.date).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <span style={{ fontSize: 11, opacity: 0.6 }}>
+            This run so far: ${Math.round(currentNetWorth)}. Records save locally on this device when you reset.
+          </span>
         </div>
       </div>
     </div>

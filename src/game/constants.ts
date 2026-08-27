@@ -106,3 +106,8 @@ export const RIVAL_STOCK_RESTOCK_MIN = -20;
 export const RIVAL_STOCK_RESTOCK_MAX = 20;
 
 export const MAX_NOTIFICATIONS = 20;
+
+// --- Phase 4: virality layer ---
+
+/** Matches CameraDirector's total pan duration so the banner and camera move stay in sync. */
+export const CELEBRATION_DURATION_SECONDS = 4.4;

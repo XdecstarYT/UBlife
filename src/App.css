@@ -342,3 +342,93 @@
     transform: translateY(0);
   }
 }
+
+/* --- Celebration banner (timing matches CameraDirector's 4.4s pan) --- */
+
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 25;
+  overflow: hidden;
+}
+
+.celebration-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 32px;
+  border-radius: 18px;
+  background: rgba(20, 22, 20, 0.72);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: celebration-card 4.4s ease-in-out forwards;
+}
+
+.celebration-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f5c542;
+}
+
+.celebration-label {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+}
+
+@keyframes celebration-card {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(10px);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  82% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-8px);
+  }
+}
+
+.celebration-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.celebration-particle {
+  position: absolute;
+  bottom: -10%;
+  font-size: 28px;
+  opacity: 0;
+  animation: celebration-particle 3.6s ease-out forwards;
+}
+
+@keyframes celebration-particle {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-90vh) rotate(200deg);
+  }
+}

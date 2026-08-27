@@ -20,6 +20,8 @@ export function GameCanvas({ children, camera }: GameCanvasProps) {
         antialias: tier !== 'low',
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
+        // Needed so the empire-snapshot feature can read back the last rendered frame.
+        preserveDrawingBuffer: true,
       }}
       style={{ touchAction: 'none' }}
     >

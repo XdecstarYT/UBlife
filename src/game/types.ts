@@ -231,4 +231,11 @@ export interface GameState {
   // --- Business depth: notifications ---
   notifications: GameNotification[];
   nextNotificationId: number;
+
+  // --- Phase 4: virality layer ---
+  /** Milestone id -> achieved. */
+  milestones: Record<string, boolean>;
+  /** Labels of newly-achieved milestones waiting for their camera-pan moment. */
+  celebrationQueue: string[];
+  activeCelebration: { id: string; label: string; remaining: number } | null;
 }

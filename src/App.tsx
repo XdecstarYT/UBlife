@@ -4,6 +4,7 @@ import { HUD } from './components/HUD';
 import { InteriorScene } from './components/InteriorScene';
 import { InteriorHUD } from './components/InteriorHUD';
 import { useGameStore } from './store/gameStore';
+import { useLeaderboardStore } from './store/leaderboardStore';
 import { useGameLoop } from './game/useGameLoop';
 import './App.css';
 
@@ -15,6 +16,7 @@ function App() {
 
   useEffect(() => {
     loadIfPresent();
+    useLeaderboardStore.getState().loadFromStorage();
   }, [loadIfPresent]);
 
   useEffect(() => {

@@ -14,7 +14,7 @@ restock shelves from the backroom, cashiers speed up checkout) who
 physically walk the interior, and two store archetypes (General Store,
 Boutique) with different category mixes and shelf capacity.
 
-**Phase 3 (this build):** full zoning — commercial and industrial lots
+**Phase 3:** full zoning — commercial and industrial lots
 instantly build an auto-operated satellite store or warehouse, each of
 which finds its own nearest supplying warehouse over the road/rail
 network. Multiple concurrent truck routes sharing the same road tiles
@@ -28,7 +28,7 @@ floor textures, soft contact shadows, cinematic tone mapping, and light
 bloom/vignette — all gated behind an adaptive quality tier that backs
 off automatically if the frame rate drops, targeting 50-60fps on phones.
 
-**Business depth (this build):** a day cycle (~90s) drives a real P&L —
+**Business depth:** a day cycle (~90s) drives a real P&L —
 revenue, wages, loan interest, and marketing spend roll up into a daily
 report with a net-worth history chart. Take a loan (compounding daily
 interest) to get through a cash crunch. Reputation is a slow trailing
@@ -41,6 +41,20 @@ they go unpaid — low enough and they quit; a one-time raise restores
 morale and permanently raises their wage. Ad campaigns (flyer, radio)
 temporarily boost foot traffic. All of it lives in the new **Business**
 panel, reachable from the city view.
+
+**Phase 4 — virality layer (this build):** milestones (net worth
+tiers, day counts, first satellite store/warehouse, first train, high
+reputation) trigger a one-time camera-directed celebration — a wide
+establishing shot with a slow orbit, a center-screen banner, and rising
+particles — then hand control back exactly where you left off. Multiple
+milestones queue and play one at a time rather than overlapping. A
+one-tap **Share** button composites the live city view with a stats
+banner (net worth, day, reputation, store count) into a PNG and offers
+it through the native share sheet where available, falling back to a
+direct download. There's also a local **"Your best runs" leaderboard**
+in the Business panel — since this is a backend-free game, it's an
+honest personal record on this device (recorded when you reset a run
+with real progress), not a global/multiplayer ranking.
 
 ## Stack
 
