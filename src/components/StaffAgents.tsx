@@ -38,11 +38,11 @@ function StaffAgent({ id, role }: { id: number; role: StaffRole }) {
     <group ref={groupRef}>
       <mesh position={[0, 0.4, 0]} castShadow>
         <capsuleGeometry args={[0.22, 0.5, 4, 8]} />
-        <meshStandardMaterial color={ROLE_COLOR[role]} />
+        <meshStandardMaterial color={ROLE_COLOR[role]} roughness={0.65} metalness={0} />
       </mesh>
       <mesh position={[0, 0.78, 0]}>
         <sphereGeometry args={[0.16, 8, 8]} />
-        <meshStandardMaterial color="#f0c9a0" />
+        <meshStandardMaterial color="#f0c9a0" roughness={0.55} metalness={0} />
       </mesh>
     </group>
   );

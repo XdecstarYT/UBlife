@@ -17,21 +17,24 @@ const NEIGHBOR_OFFSETS = [
 ];
 
 /**
- * BFS over road tiles (plus the fixed warehouse/store endpoints) to find a
- * driveable path. Returns grid positions from `from` to `to`, or null if
- * the two endpoints aren't connected by contiguous road.
+ * BFS over tiles of a given type (plus the two endpoints themselves) to
+ * find a connected path. Returns grid positions from `from` to `to`, or
+ * null if they aren't connected by contiguous tiles of that type. Used for
+ * both road (truck) and rail (train) routing — same graph search, different
+ * walkable tile type.
  */
-export function findRoadPath(
+export function findPath(
   tiles: Record<TileKey, TileType>,
   from: GridPos,
   to: GridPos,
   width: number,
-  height: number
+  height: number,
+  walkableType: TileType
 ): GridPos[] | null {
   const isWalkable = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= width || y >= height) return false;
     if ((x === from.x && y === from.y) || (x === to.x && y === to.y)) return true;
-    return tiles[tileKey(x, y)] === 'road';
+    return tiles[tileKey(x, y)] === walkableType;
   };
 
   const startKey = tileKey(from.x, from.y);
@@ -72,4 +75,15 @@ export function findRoadPath(
   }
 
   return null;
+}
+
+/** Convenience wrapper for the common case of routing over 'road' tiles. */
+export function findRoadPath(
+  tiles: Record<TileKey, TileType>,
+  from: GridPos,
+  to: GridPos,
+  width: number,
+  height: number
+): GridPos[] | null {
+  return findPath(tiles, from, to, width, height, 'road');
 }

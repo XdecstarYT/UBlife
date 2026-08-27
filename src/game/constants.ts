@@ -53,3 +53,21 @@ export const CASHIER_SERVICE_BONUS_SECONDS = 1.0;
 export const MIN_CHECKOUT_SERVICE_SECONDS = 1.0;
 
 export const CUSTOMER_PATIENCE_SECONDS = 4.5;
+
+// --- Phase 3: full zoning, multi-store logistics ---
+
+export const COMMERCIAL_COST = 120;
+export const INDUSTRIAL_COST = 100;
+export const RAIL_COST = 30;
+
+export const SATELLITE_STORE_CAPACITY = 30;
+export const SATELLITE_DELIVERY_CAPACITY = 20;
+export const SATELLITE_PRICE = 9;
+export const SATELLITE_HAPPINESS_GAIN = 2;
+export const SATELLITE_HAPPINESS_LOSS = 3;
+
+export const TRAIN_SPEED = 3.6; // tiles per second — faster than a truck's 2.2
+export const TRAIN_CAPACITY = 36; // per delivery run — more than a truck's 20
+
+/** Congestion penalty per additional concurrent route sharing a road tile. */
+export const CONGESTION_FACTOR = 0.35;

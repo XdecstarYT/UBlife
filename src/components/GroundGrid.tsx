@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useGameStore } from '../store/gameStore';
 import { worldToGrid } from '../game/grid';
+import { getGrassTexture } from '../game/proceduralTextures';
 
 const TAP_THRESHOLD_PX = 6;
 
@@ -32,6 +33,7 @@ export function GroundGrid() {
 
   const width = gridWidth * cellSize;
   const depth = gridHeight * cellSize;
+  const grassTexture = useMemo(() => getGrassTexture(Math.max(gridWidth, gridHeight)), [gridWidth, gridHeight]);
 
   const lineGeometry = useMemo(() => {
     const points: number[] = [];
@@ -59,7 +61,7 @@ export function GroundGrid() {
         receiveShadow
       >
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color="#6fa85c" />
+        <meshStandardMaterial map={grassTexture} roughness={0.95} metalness={0} />
       </mesh>
       <lineSegments geometry={lineGeometry} position={[0, 0.01, 0]} raycast={() => null}>
         <lineBasicMaterial color="#3f6b34" transparent opacity={0.5} />

@@ -4,6 +4,7 @@ import type { ThreeEvent } from '@react-three/fiber';
 import { useGameStore } from '../store/gameStore';
 import { worldToGrid, gridToWorld } from '../game/grid';
 import { BACKROOM_POS } from '../game/constants';
+import { getFloorTexture } from '../game/proceduralTextures';
 
 const TAP_THRESHOLD_PX = 6;
 
@@ -55,6 +56,7 @@ export function InteriorGround() {
   const wallHeight = 1.6;
   const halfW = w / 2;
   const halfD = d / 2;
+  const floorTexture = useMemo(() => getFloorTexture(Math.max(width, height) / 2), [width, height]);
 
   return (
     <group>
@@ -65,7 +67,7 @@ export function InteriorGround() {
         receiveShadow
       >
         <planeGeometry args={[w, d]} />
-        <meshStandardMaterial color="#d8cdb8" />
+        <meshStandardMaterial map={floorTexture} roughness={0.6} metalness={0} />
       </mesh>
       <lineSegments geometry={lineGeometry} position={[0, 0.01, 0]} raycast={() => null}>
         <lineBasicMaterial color="#a89a7c" transparent opacity={0.6} />

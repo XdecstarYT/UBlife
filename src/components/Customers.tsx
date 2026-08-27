@@ -48,9 +48,9 @@ export function Customers() {
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_CUSTOMERS]} raycast={() => null}>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_CUSTOMERS]} raycast={() => null} castShadow>
       <capsuleGeometry args={[0.18, 0.35, 4, 6]} />
-      <meshStandardMaterial />
+      <meshStandardMaterial roughness={0.7} metalness={0} />
     </instancedMesh>
   );
 }

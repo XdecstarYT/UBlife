@@ -1,7 +1,7 @@
 // Shared grid-based world model: the single data structure that underpins
 // zoning, buildings, and the supply route (trucks travel along road tiles).
 
-export type TileType = 'empty' | 'road' | 'residential';
+export type TileType = 'empty' | 'road' | 'rail' | 'residential' | 'commercial' | 'industrial';
 
 export type TileKey = string; // `${x},${y}`
 
@@ -11,6 +11,7 @@ export interface GridPos {
 }
 
 export type TruckPhase = 'idle' | 'to-store' | 'to-warehouse' | 'blocked';
+export type VehicleMode = 'truck' | 'train';
 
 export interface TruckState {
   phase: TruckPhase;
@@ -21,9 +22,36 @@ export interface TruckState {
   /** 0..1 progress along the current segment. */
   segmentT: number;
   cargo: number;
+  /** Truck (road, congestion-affected) or train (rail, faster, immune to congestion). */
+  mode: VehicleMode;
 }
 
-export type PlaceMode = 'select' | 'road' | 'residential' | 'bulldoze';
+export type PlaceMode =
+  | 'select'
+  | 'road'
+  | 'rail'
+  | 'residential'
+  | 'commercial'
+  | 'industrial'
+  | 'bulldoze';
+
+// --- Phase 3: full zoning, multi-store logistics ---
+
+export interface SatelliteStore {
+  id: number;
+  pos: GridPos;
+  stock: number;
+  capacity: number;
+  /** Warehouse currently supplying this store: -1 = original warehouse, >0 = a satellite warehouse id, null = none found. */
+  warehouseId: number | null;
+  vehicle: TruckState;
+  hasRoute: boolean;
+}
+
+export interface SatelliteWarehouse {
+  id: number;
+  pos: GridPos;
+}
 
 export type View = 'city' | 'store';
 
@@ -82,6 +110,8 @@ export interface CustomerState {
   segmentT: number;
   category: ProductCategory;
   patience: number;
+  /** 0 = the flagship store; otherwise a SatelliteStore id. */
+  targetStoreId: number;
 }
 
 export interface GameState {
@@ -100,8 +130,6 @@ export interface GameState {
   /** Derived each tick from shelf contents — total units on display / total shelf capacity. */
   stock: number;
   maxStock: number;
-  deliveryCapacity: number;
-  truckSpeed: number; // tiles per second
 
   happiness: number; // 0..100
 
@@ -130,4 +158,12 @@ export interface GameState {
 
   /** Seconds until the checkout can serve another customer. */
   checkoutCooldown: number;
+
+  // --- Phase 3: zoning-grown satellite stores/warehouses + logistics ---
+  satelliteStores: SatelliteStore[];
+  satelliteWarehouses: SatelliteWarehouse[];
+  nextSatelliteStoreId: number;
+  nextSatelliteWarehouseId: number;
+  /** Concurrent-route load per road tile this tick, for congestion + visualization. */
+  roadLoad: Record<TileKey, number>;
 }

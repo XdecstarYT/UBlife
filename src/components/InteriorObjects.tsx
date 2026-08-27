@@ -20,13 +20,13 @@ export function InteriorObjects() {
           const color = CATEGORIES[tile.shelf.category].color;
           return (
             <group key={key} position={[wx, 0, wz]}>
-              <mesh position={[0, 0.5, 0]} castShadow>
+              <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
                 <boxGeometry args={[1.7, 1, 0.6]} />
-                <meshStandardMaterial color="#8c6a45" />
+                <meshStandardMaterial color="#8c6a45" roughness={0.75} metalness={0} />
               </mesh>
               <mesh position={[0, 0.72, 0.35]} scale={[Math.max(ratio, 0.001), 1, 1]}>
                 <boxGeometry args={[1.5, 0.35, 0.15]} />
-                <meshStandardMaterial color={color} />
+                <meshStandardMaterial color={color} roughness={0.5} metalness={0.1} />
               </mesh>
             </group>
           );
@@ -35,13 +35,13 @@ export function InteriorObjects() {
         if (tile.type === 'checkout') {
           return (
             <group key={key} position={[wx, 0, wz]}>
-              <mesh position={[0, 0.4, 0]} castShadow>
+              <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
                 <boxGeometry args={[1.5, 0.8, 0.7]} />
-                <meshStandardMaterial color="#e0e0e0" />
+                <meshStandardMaterial color="#e0e0e0" roughness={0.4} metalness={0.15} />
               </mesh>
-              <mesh position={[0, 0.85, -0.15]}>
+              <mesh position={[0, 0.85, -0.15]} castShadow>
                 <boxGeometry args={[0.15, 0.9, 0.15]} />
-                <meshStandardMaterial color="#333" />
+                <meshStandardMaterial color="#333" roughness={0.3} metalness={0.4} />
               </mesh>
             </group>
           );
@@ -50,13 +50,13 @@ export function InteriorObjects() {
         // decor
         return (
           <group key={key} position={[wx, 0, wz]}>
-            <mesh position={[0, 0.05, 0]}>
+            <mesh position={[0, 0.05, 0]} receiveShadow>
               <cylinderGeometry args={[0.35, 0.4, 0.1, 8]} />
-              <meshStandardMaterial color="#7a5a3a" />
+              <meshStandardMaterial color="#7a5a3a" roughness={0.6} metalness={0.1} />
             </mesh>
             <mesh position={[0, 0.45, 0]} castShadow>
               <coneGeometry args={[0.4, 0.8, 8]} />
-              <meshStandardMaterial color="#4a8f4a" />
+              <meshStandardMaterial color="#4a8f4a" roughness={0.8} metalness={0} />
             </mesh>
           </group>
         );
