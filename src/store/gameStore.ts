@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  CampaignKind,
   CustomerState,
   GameState,
   GridPos,
@@ -33,12 +34,14 @@ import {
   vehicleCapacity,
   warehouseCandidates,
 } from '../game/logistics';
+import { CAMPAIGNS, RIVAL_STANCE_ATTRACTIVENESS, initialRivals, levelFromExperience } from '../game/business';
 import {
   BACKROOM_CAPACITY,
   BACKROOM_POS,
   BASE_CHECKOUT_SERVICE_SECONDS,
   BASE_RESTOCK_TRICKLE,
   BASE_SPAWN_INTERVAL,
+  CASHIER_BONUS_PER_LEVEL,
   CASHIER_HIRE_COST,
   CASHIER_SERVICE_BONUS_SECONDS,
   CASHIER_WAGE_PER_SEC,
@@ -47,7 +50,9 @@ import {
   COMMERCIAL_COST,
   CUSTOMER_PATIENCE_SECONDS,
   CUSTOMER_SPEED,
+  DAY_LENGTH_SECONDS,
   DECOR_COST,
+  FINANCE_HISTORY_LENGTH,
   GRID_HEIGHT,
   GRID_WIDTH,
   HAPPINESS_DECAY_TOWARD_NEUTRAL,
@@ -57,9 +62,25 @@ import {
   INTERIOR_CELL_SIZE,
   INTERIOR_HEIGHT,
   INTERIOR_WIDTH,
+  LOAN_INTEREST_RATE_PER_DAY,
+  MAX_LOAN,
+  MAX_NOTIFICATIONS,
   MIN_CHECKOUT_SERVICE_SECONDS,
   MIN_SPAWN_INTERVAL,
+  MORALE_BASE_DECAY_PER_SEC,
+  MORALE_PAID_RECOVERY_PER_SEC,
+  MORALE_UNDERPAID_PENALTY_PER_SEC,
+  PLAYER_BASE_PULL_WEIGHT,
   RAIL_COST,
+  RAISE_COST,
+  RAISE_MORALE_BOOST,
+  RAISE_WAGE_INCREMENT,
+  REPUTATION_SPAWN_FACTOR_MAX,
+  REPUTATION_SPAWN_FACTOR_MIN,
+  REPUTATION_TREND_RATE,
+  RIVAL_BASE_PULL_WEIGHT,
+  RIVAL_STOCK_RESTOCK_MAX,
+  RIVAL_STOCK_RESTOCK_MIN,
   ROAD_COST,
   RESIDENTIAL_COST,
   SATELLITE_HAPPINESS_GAIN,
@@ -68,8 +89,11 @@ import {
   SATELLITE_STORE_CAPACITY,
   SHELF_COST,
   SPAWN_INTERVAL_PER_HOUSE,
+  STAFF_LEVEL_THRESHOLDS,
   STAFF_SPEED,
+  STAFF_XP_PER_SECOND_WORKED,
   STARTING_MONEY,
+  STOCKER_BATCH_PER_LEVEL,
   STOCKER_BATCH_SIZE,
   STOCKER_HIRE_COST,
   STOCKER_WAGE_PER_SEC,
@@ -78,7 +102,7 @@ import {
   WAREHOUSE_POS,
 } from '../game/constants';
 
-const SAVE_KEY = 'tradecity-save-v3';
+const SAVE_KEY = 'tradecity-save-v4';
 
 interface GameActions {
   setMode: (mode: PlaceMode) => void;
@@ -90,6 +114,10 @@ interface GameActions {
   cyclePriceTier: (category: ProductCategory) => void;
   hireStaff: (role: StaffRole) => void;
   fireStaff: (id: number) => void;
+  giveRaise: (id: number) => void;
+  takeLoan: (amount: number) => void;
+  repayLoan: (amount: number) => void;
+  startCampaign: (kind: CampaignKind) => void;
   tick: (dt: number) => void;
   save: () => void;
   loadIfPresent: () => void;
@@ -101,7 +129,29 @@ function initialTruck(): TruckState {
 }
 
 function newStaffMember(id: number, role: StaffRole): StaffMember {
-  return { id, role, path: [], segmentIndex: 0, segmentT: 0, task: 'idle', targetKey: null, workTimer: 0 };
+  return {
+    id,
+    role,
+    path: [],
+    segmentIndex: 0,
+    segmentT: 0,
+    task: 'idle',
+    targetKey: null,
+    workTimer: 0,
+    experience: 0,
+    level: 1,
+    morale: 70,
+    wageBonus: 0,
+  };
+}
+
+function pushNotification(state: GameState, text: string) {
+  state.notifications = [...state.notifications, { id: state.nextNotificationId, text }].slice(-MAX_NOTIFICATIONS);
+  state.nextNotificationId += 1;
+}
+
+function randInt(min: number, max: number): number {
+  return Math.floor(min + Math.random() * (max - min + 1));
 }
 
 function starterInteriorTiles(): GameState['interiorTiles'] {
@@ -155,6 +205,22 @@ function freshState(): GameState {
     nextSatelliteStoreId: 1,
     nextSatelliteWarehouseId: 1,
     roadLoad: {},
+
+    loanBalance: 0,
+    dayNumber: 1,
+    dayTimer: 0,
+    dayAccumulators: { revenue: 0, wages: 0, marketing: 0 },
+    financeHistory: [],
+    netWorthHistory: [STARTING_MONEY],
+
+    reputation: 60,
+    activeCampaign: null,
+
+    rivals: initialRivals(),
+    lostSalesToday: 0,
+
+    notifications: [],
+    nextNotificationId: 1,
   };
 }
 
@@ -412,6 +478,51 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   fireStaff: (id) => set((s) => ({ staff: s.staff.filter((m) => m.id !== id) })),
 
+  giveRaise: (id) =>
+    set((s) => {
+      if (s.money < RAISE_COST) return {};
+      const member = s.staff.find((m) => m.id === id);
+      if (!member) return {};
+      return {
+        money: s.money - RAISE_COST,
+        staff: s.staff.map((m) =>
+          m.id === id
+            ? { ...m, wageBonus: m.wageBonus + RAISE_WAGE_INCREMENT, morale: clamp(m.morale + RAISE_MORALE_BOOST, 0, 100) }
+            : m
+        ),
+      };
+    }),
+
+  takeLoan: (amount) =>
+    set((s) => {
+      const borrow = Math.min(Math.max(0, amount), MAX_LOAN - s.loanBalance);
+      if (borrow <= 0) return {};
+      return { money: s.money + borrow, loanBalance: s.loanBalance + borrow };
+    }),
+
+  repayLoan: (amount) =>
+    set((s) => {
+      const pay = Math.min(Math.max(0, amount), s.loanBalance, s.money);
+      if (pay <= 0) return {};
+      return { money: s.money - pay, loanBalance: s.loanBalance - pay };
+    }),
+
+  startCampaign: (kind) =>
+    set((s) => {
+      if (s.activeCampaign) return {};
+      const config = CAMPAIGNS[kind];
+      if (s.money < config.cost) return {};
+      return {
+        money: s.money - config.cost,
+        activeCampaign: { kind, remaining: config.duration, spawnMultiplier: config.spawnMultiplier },
+        dayAccumulators: { ...s.dayAccumulators, marketing: s.dayAccumulators.marketing + config.cost },
+        notifications: [...s.notifications, { id: s.nextNotificationId, text: `${config.label} launched!` }].slice(
+          -MAX_NOTIFICATIONS
+        ),
+        nextNotificationId: s.nextNotificationId + 1,
+      };
+    }),
+
   tick: (dt) => {
     set((s) => {
       const next: GameState = {
@@ -420,6 +531,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         customers: s.customers.map((c) => ({ ...c })),
         staff: s.staff.map((m) => ({ ...m })),
         satelliteStores: s.satelliteStores.map((st) => ({ ...st, vehicle: { ...st.vehicle } })),
+        dayAccumulators: { ...s.dayAccumulators },
       };
 
       // --- Congestion snapshot, taken before anything moves this tick ---
@@ -529,11 +641,36 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         }
       }
 
+      // --- Wages (computed before the staff loop so morale can react to affordability this tick) ---
+      const wagePerSec = next.staff.reduce(
+        (sum, m) => sum + (m.role === 'stocker' ? STOCKER_WAGE_PER_SEC : CASHIER_WAGE_PER_SEC) + m.wageBonus,
+        0
+      );
+      const wageCost = wagePerSec * dt;
+      const canAffordWages = next.money >= wageCost;
+
       // --- Staff AI (flagship interior only) ---
       const claimedCheckouts = new Set(
         next.staff.filter((m) => m.role === 'cashier' && m.targetKey).map((m) => m.targetKey)
       );
+      const quitIds = new Set<number>();
       for (const member of next.staff) {
+        // Experience, level, and morale progress regardless of role.
+        if (member.task === 'working') {
+          member.experience += dt * STAFF_XP_PER_SECOND_WORKED;
+        }
+        member.level = levelFromExperience(member.experience, STAFF_LEVEL_THRESHOLDS);
+
+        const moraleDelta = canAffordWages
+          ? MORALE_PAID_RECOVERY_PER_SEC - MORALE_BASE_DECAY_PER_SEC
+          : -(MORALE_BASE_DECAY_PER_SEC + MORALE_UNDERPAID_PENALTY_PER_SEC);
+        member.morale = clamp(member.morale + moraleDelta * dt, 0, 100);
+        if (member.morale <= 0) {
+          quitIds.add(member.id);
+          pushNotification(next, `${member.role === 'stocker' ? 'A stocker' : 'A cashier'} quit — morale hit rock bottom.`);
+          continue;
+        }
+
         if (member.role === 'stocker') {
           if (member.task === 'walking') {
             const { segmentIndex, segmentT, arrived } = advanceAlongPath(
@@ -555,7 +692,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
                 const tile = next.interiorTiles[member.targetKey];
                 if (tile?.shelf && next.backroomStock > 0) {
                   const room = tile.shelf.capacity - tile.shelf.stock;
-                  const amount = Math.min(STOCKER_BATCH_SIZE, room, Math.floor(next.backroomStock));
+                  const batchSize = STOCKER_BATCH_SIZE + (member.level - 1) * STOCKER_BATCH_PER_LEVEL;
+                  const amount = Math.min(batchSize, room, Math.floor(next.backroomStock));
                   if (amount > 0) {
                     next.interiorTiles = {
                       ...next.interiorTiles,
@@ -641,40 +779,71 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
           }
         }
       }
+      if (quitIds.size > 0) {
+        next.staff = next.staff.filter((m) => !quitIds.has(m.id));
+      }
 
-      // --- Customer spawning (picks a target store: flagship or any zoned satellite) ---
+      // --- Marketing campaign countdown ---
+      if (next.activeCampaign) {
+        const remaining = next.activeCampaign.remaining - dt;
+        if (remaining <= 0) {
+          pushNotification(next, `${CAMPAIGNS[next.activeCampaign.kind].label} ended.`);
+          next.activeCampaign = null;
+        } else {
+          next.activeCampaign = { ...next.activeCampaign, remaining };
+        }
+      }
+
+      // --- Customer spawning (picks a target store: flagship or any zoned satellite; may go to a rival instead) ---
       const houses = residentialCount(next.tiles);
-      const spawnInterval = Math.max(
+      const baseSpawnInterval = Math.max(
         MIN_SPAWN_INTERVAL,
         BASE_SPAWN_INTERVAL - houses * SPAWN_INTERVAL_PER_HOUSE
       );
+      const reputationFactor =
+        REPUTATION_SPAWN_FACTOR_MIN +
+        (REPUTATION_SPAWN_FACTOR_MAX - REPUTATION_SPAWN_FACTOR_MIN) * (next.reputation / 100);
+      const campaignFactor = next.activeCampaign?.spawnMultiplier ?? 1;
+      const spawnInterval = Math.max(MIN_SPAWN_INTERVAL, baseSpawnInterval / (reputationFactor * campaignFactor));
+
       next.customerSpawnTimer -= dt;
       if (next.customerSpawnTimer <= 0) {
         next.customerSpawnTimer = spawnInterval;
-        const storeIds = [0, ...next.satelliteStores.map((st) => st.id)];
-        const targetStoreId = storeIds[Math.floor(Math.random() * storeIds.length)];
-        const targetPos = storePosById(next, targetStoreId);
-        const edge = edgePos(targetPos.y);
-        const newCustomer: CustomerState = {
-          id: next.nextCustomerId,
-          phase: 'entering',
-          path: [edge, targetPos],
-          segmentIndex: 0,
-          segmentT: 0,
-          category: pickDesiredCategory(next),
-          patience: 0,
-          targetStoreId,
-        };
-        next.nextCustomerId = next.nextCustomerId + 1;
-        next.customers = [...next.customers, newCustomer];
+
+        const playerWeight = PLAYER_BASE_PULL_WEIGHT + next.reputation / 50;
+        const rivalWeights = next.rivals.map(
+          (r) => RIVAL_BASE_PULL_WEIGHT + r.stockLevel / 100 + RIVAL_STANCE_ATTRACTIVENESS[r.stance]
+        );
+        const totalWeight = playerWeight + rivalWeights.reduce((a, b) => a + b, 0);
+        const wentToRival = Math.random() * totalWeight > playerWeight;
+
+        if (wentToRival) {
+          next.lostSalesToday += 1;
+        } else {
+          const storeIds = [0, ...next.satelliteStores.map((st) => st.id)];
+          const targetStoreId = storeIds[Math.floor(Math.random() * storeIds.length)];
+          const targetPos = storePosById(next, targetStoreId);
+          const edge = edgePos(targetPos.y);
+          const newCustomer: CustomerState = {
+            id: next.nextCustomerId,
+            phase: 'entering',
+            path: [edge, targetPos],
+            segmentIndex: 0,
+            segmentT: 0,
+            category: pickDesiredCategory(next),
+            patience: 0,
+            targetStoreId,
+          };
+          next.nextCustomerId = next.nextCustomerId + 1;
+          next.customers = [...next.customers, newCustomer];
+        }
       }
 
       // --- Flagship checkout throughput ---
-      const cashierCount = next.staff.filter((m) => m.role === 'cashier' && m.task === 'working').length;
-      const serviceSeconds = Math.max(
-        MIN_CHECKOUT_SERVICE_SECONDS,
-        BASE_CHECKOUT_SERVICE_SECONDS - cashierCount * CASHIER_SERVICE_BONUS_SECONDS
-      );
+      const cashierBonusSeconds = next.staff
+        .filter((m) => m.role === 'cashier' && m.task === 'working')
+        .reduce((sum, m) => sum + CASHIER_SERVICE_BONUS_SECONDS + (m.level - 1) * CASHIER_BONUS_PER_LEVEL, 0);
+      const serviceSeconds = Math.max(MIN_CHECKOUT_SERVICE_SECONDS, BASE_CHECKOUT_SERVICE_SECONDS - cashierBonusSeconds);
       next.checkoutCooldown = Math.max(0, next.checkoutCooldown - dt);
       const hasCheckout = findCheckoutKeys(next.interiorTiles).length > 0;
 
@@ -699,6 +868,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         const tier = next.priceTiers[c.category];
         const price = CATEGORIES[c.category].basePrice * PRICE_MULTIPLIER[tier];
         next.money += price;
+        next.dayAccumulators.revenue += price;
         sendAway(c, true, next.storePos);
         return true;
       };
@@ -737,6 +907,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             if (store && store.stock >= 1) {
               store.stock -= 1;
               next.money += SATELLITE_PRICE;
+              next.dayAccumulators.revenue += SATELLITE_PRICE;
               c.phase = 'leaving-happy';
               happinessDelta += SATELLITE_HAPPINESS_GAIN;
               c.path = [targetPos, edgePos(targetPos.y)];
@@ -783,17 +954,52 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       const towardNeutral = (50 - next.happiness) * 0.02 * HAPPINESS_DECAY_TOWARD_NEUTRAL * dt;
       next.happiness = clamp(next.happiness + towardNeutral, 0, 100);
 
-      // --- Wages ---
-      const wagePerSec = next.staff.reduce(
-        (sum, m) => sum + (m.role === 'stocker' ? STOCKER_WAGE_PER_SEC : CASHIER_WAGE_PER_SEC),
-        0
+      // --- Reputation: a slow-moving trailing average of happiness ---
+      next.reputation = clamp(
+        next.reputation + (next.happiness - next.reputation) * REPUTATION_TREND_RATE * dt,
+        0,
+        100
       );
-      next.money = Math.max(0, next.money - wagePerSec * dt);
+
+      // --- Wages (rate computed above, before the staff loop) ---
+      next.money = Math.max(0, next.money - wageCost);
+      next.dayAccumulators.wages += wageCost;
 
       // --- Derived totals for HUD ---
       const totals = totalShelfStock(next.interiorTiles);
       next.stock = totals.stock;
       next.maxStock = totals.capacity;
+
+      // --- Day cycle: rolls up the day's P&L, applies loan interest, runs rival AI ---
+      next.dayTimer += dt;
+      if (next.dayTimer >= DAY_LENGTH_SECONDS) {
+        next.dayTimer -= DAY_LENGTH_SECONDS;
+        const interest = next.loanBalance * LOAN_INTEREST_RATE_PER_DAY;
+        next.loanBalance += interest;
+        const netWorth = next.money - next.loanBalance;
+
+        next.financeHistory = [
+          ...next.financeHistory,
+          {
+            day: next.dayNumber,
+            revenue: next.dayAccumulators.revenue,
+            wages: next.dayAccumulators.wages,
+            interest,
+            marketing: next.dayAccumulators.marketing,
+            netWorth,
+          },
+        ].slice(-FINANCE_HISTORY_LENGTH);
+        next.netWorthHistory = [...next.netWorthHistory, netWorth].slice(-FINANCE_HISTORY_LENGTH);
+
+        next.dayAccumulators = { revenue: 0, wages: 0, marketing: 0 };
+        next.rivals = next.rivals.map((r) => ({
+          ...r,
+          stockLevel: clamp(r.stockLevel + randInt(RIVAL_STOCK_RESTOCK_MIN, RIVAL_STOCK_RESTOCK_MAX), 10, 100),
+        }));
+        pushNotification(next, `Day ${next.dayNumber} report ready — net worth $${Math.round(netWorth)}.`);
+        next.dayNumber += 1;
+        next.lostSalesToday = 0;
+      }
 
       return next;
     });
@@ -815,6 +1021,16 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       satelliteWarehouses: s.satelliteWarehouses,
       nextSatelliteStoreId: s.nextSatelliteStoreId,
       nextSatelliteWarehouseId: s.nextSatelliteWarehouseId,
+      loanBalance: s.loanBalance,
+      dayNumber: s.dayNumber,
+      dayTimer: s.dayTimer,
+      dayAccumulators: s.dayAccumulators,
+      financeHistory: s.financeHistory,
+      netWorthHistory: s.netWorthHistory,
+      reputation: s.reputation,
+      activeCampaign: s.activeCampaign,
+      rivals: s.rivals,
+      lostSalesToday: s.lostSalesToday,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
@@ -853,6 +1069,16 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             typeof payload.nextSatelliteStoreId === 'number' ? payload.nextSatelliteStoreId : 1,
           nextSatelliteWarehouseId:
             typeof payload.nextSatelliteWarehouseId === 'number' ? payload.nextSatelliteWarehouseId : 1,
+          loanBalance: typeof payload.loanBalance === 'number' ? payload.loanBalance : 0,
+          dayNumber: typeof payload.dayNumber === 'number' ? payload.dayNumber : 1,
+          dayTimer: typeof payload.dayTimer === 'number' ? payload.dayTimer : 0,
+          dayAccumulators: payload.dayAccumulators ?? { revenue: 0, wages: 0, marketing: 0 },
+          financeHistory: Array.isArray(payload.financeHistory) ? payload.financeHistory : [],
+          netWorthHistory: Array.isArray(payload.netWorthHistory) ? payload.netWorthHistory : [STARTING_MONEY],
+          reputation: typeof payload.reputation === 'number' ? payload.reputation : 60,
+          activeCampaign: payload.activeCampaign ?? null,
+          rivals: Array.isArray(payload.rivals) ? payload.rivals : initialRivals(),
+          lostSalesToday: typeof payload.lostSalesToday === 'number' ? payload.lostSalesToday : 0,
           stock: totals.stock,
           maxStock: totals.capacity,
         };

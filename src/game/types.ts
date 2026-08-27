@@ -98,6 +98,14 @@ export interface StaffMember {
   /** Stocker: shelf tile key currently targeted. Cashier: checkout tile key claimed. */
   targetKey: string | null;
   workTimer: number;
+  /** Seconds of active work accumulated — drives level. */
+  experience: number;
+  /** 1..5, derived from experience; improves batch size / service bonus. */
+  level: number;
+  /** 0..100; hits 0 and the employee quits. */
+  morale: number;
+  /** Extra wage/sec granted by raises, on top of the role's base wage. */
+  wageBonus: number;
 }
 
 export type CustomerPhase = 'entering' | 'waiting' | 'leaving-happy' | 'leaving-sad';
@@ -112,6 +120,40 @@ export interface CustomerState {
   patience: number;
   /** 0 = the flagship store; otherwise a SatelliteStore id. */
   targetStoreId: number;
+}
+
+// --- Business depth: finance, marketing, competition ---
+
+export type CampaignKind = 'flyer' | 'radio';
+
+export interface ActiveCampaign {
+  kind: CampaignKind;
+  remaining: number;
+  spawnMultiplier: number;
+}
+
+export interface DaySummary {
+  day: number;
+  revenue: number;
+  wages: number;
+  interest: number;
+  marketing: number;
+  netWorth: number;
+}
+
+export type RivalStance = 'low' | 'normal' | 'high';
+
+export interface Rival {
+  id: number;
+  name: string;
+  stance: RivalStance;
+  /** 0..100, random-walks day to day — how well-stocked they currently are. */
+  stockLevel: number;
+}
+
+export interface GameNotification {
+  id: number;
+  text: string;
 }
 
 export interface GameState {
@@ -166,4 +208,27 @@ export interface GameState {
   nextSatelliteWarehouseId: number;
   /** Concurrent-route load per road tile this tick, for congestion + visualization. */
   roadLoad: Record<TileKey, number>;
+
+  // --- Business depth: finance ---
+  loanBalance: number;
+  dayNumber: number;
+  dayTimer: number;
+  dayAccumulators: { revenue: number; wages: number; marketing: number };
+  financeHistory: DaySummary[];
+  netWorthHistory: number[];
+
+  // --- Business depth: marketing ---
+  reputation: number; // 0..100, a slow-moving trailing average of happiness
+  activeCampaign: ActiveCampaign | null;
+
+  // --- Business depth: employees ---
+  // (StaffMember itself carries experience/level/morale/wageBonus)
+
+  // --- Business depth: competition ---
+  rivals: Rival[];
+  lostSalesToday: number;
+
+  // --- Business depth: notifications ---
+  notifications: GameNotification[];
+  nextNotificationId: number;
 }

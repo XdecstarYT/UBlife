@@ -28,6 +28,20 @@ floor textures, soft contact shadows, cinematic tone mapping, and light
 bloom/vignette — all gated behind an adaptive quality tier that backs
 off automatically if the frame rate drops, targeting 50-60fps on phones.
 
+**Business depth (this build):** a day cycle (~90s) drives a real P&L —
+revenue, wages, loan interest, and marketing spend roll up into a daily
+report with a net-worth history chart. Take a loan (compounding daily
+interest) to get through a cash crunch. Reputation is a slow trailing
+average of happiness that both draws more customers and helps you fend
+off three fixed-personality rival stores, who quietly siphon off
+customers each time reputation or your stock can't compete — tracked as
+lost sales per day. Staff gain experience and level up while working
+(faster restocking, quicker checkout), and have morale that drops if
+they go unpaid — low enough and they quit; a one-time raise restores
+morale and permanently raises their wage. Ad campaigns (flyer, radio)
+temporarily boost foot traffic. All of it lives in the new **Business**
+panel, reachable from the city view.
+
 ## Stack
 
 - [Vite](https://vite.dev) + React + TypeScript
@@ -83,6 +97,8 @@ after each sale, so fewer shoppers give up waiting.
   draw more shoppers wanting that category but earn less per sale, and
   vice versa.
 - **Hire/fire staff** from the same panel; wages drain continuously.
+  Each employee shows their level and morale — give them a **raise** to
+  boost morale and lock in a permanently higher wage.
 
 ## Development
 

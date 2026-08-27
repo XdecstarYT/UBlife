@@ -71,3 +71,38 @@ export const TRAIN_CAPACITY = 36; // per delivery run — more than a truck's 20
 
 /** Congestion penalty per additional concurrent route sharing a road tile. */
 export const CONGESTION_FACTOR = 0.35;
+
+// --- Business depth ---
+
+/** One in-game "day" — the cadence for the P&L report, loan interest, and rival AI. */
+export const DAY_LENGTH_SECONDS = 90;
+export const FINANCE_HISTORY_LENGTH = 14; // days kept in the report
+
+export const MAX_LOAN = 3000;
+export const LOAN_INTEREST_RATE_PER_DAY = 0.05;
+
+/** Reputation is a long-memory trailing average of happiness — this is how fast it catches up. */
+export const REPUTATION_TREND_RATE = 0.015;
+/** Spawn-interval multiplier ranges from ~0.5x (rep 0) to ~1.5x faster (rep 100). */
+export const REPUTATION_SPAWN_FACTOR_MIN = 0.5;
+export const REPUTATION_SPAWN_FACTOR_MAX = 1.5;
+
+export const STAFF_XP_PER_SECOND_WORKED = 1;
+export const STAFF_LEVEL_THRESHOLDS = [0, 40, 100, 200, 400]; // cumulative seconds worked for levels 1-5
+export const STOCKER_BATCH_PER_LEVEL = 2;
+export const CASHIER_BONUS_PER_LEVEL = 0.2;
+
+export const MORALE_BASE_DECAY_PER_SEC = 0.08;
+export const MORALE_UNDERPAID_PENALTY_PER_SEC = 0.6;
+export const MORALE_PAID_RECOVERY_PER_SEC = 0.15;
+export const RAISE_COST = 50;
+export const RAISE_WAGE_INCREMENT = 0.05;
+export const RAISE_MORALE_BOOST = 25;
+
+/** Baseline pull weight for the player vs each rival when a customer decides where to shop. */
+export const PLAYER_BASE_PULL_WEIGHT = 1;
+export const RIVAL_BASE_PULL_WEIGHT = 0.5;
+export const RIVAL_STOCK_RESTOCK_MIN = -20;
+export const RIVAL_STOCK_RESTOCK_MAX = 20;
+
+export const MAX_NOTIFICATIONS = 20;

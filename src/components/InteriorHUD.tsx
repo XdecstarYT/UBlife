@@ -6,11 +6,13 @@ import {
   CASHIER_WAGE_PER_SEC,
   CHECKOUT_COST,
   DECOR_COST,
+  RAISE_COST,
   SHELF_COST,
   STOCKER_HIRE_COST,
   STOCKER_WAGE_PER_SEC,
 } from '../game/constants';
 import { findCheckoutKeys } from '../game/interior';
+import { NotificationToasts } from './NotificationToasts';
 
 const STORE_TYPE_IDS: StoreType[] = ['general', 'boutique'];
 
@@ -55,16 +57,21 @@ export function InteriorHUD() {
   const staff = useGameStore((s) => s.staff);
   const hireStaff = useGameStore((s) => s.hireStaff);
   const fireStaff = useGameStore((s) => s.fireStaff);
+  const giveRaise = useGameStore((s) => s.giveRaise);
   const hasCheckout = useGameStore((s) => findCheckoutKeys(s.interiorTiles).length > 0);
   const setView = useGameStore((s) => s.setView);
 
   const allowedCategories = STORE_TYPES[storeType].allowedCategories;
   const stockers = staff.filter((m) => m.role === 'stocker');
   const cashiers = staff.filter((m) => m.role === 'cashier');
-  const wagePerSec = stockers.length * STOCKER_WAGE_PER_SEC + cashiers.length * CASHIER_WAGE_PER_SEC;
+  const wagePerSec = staff.reduce(
+    (sum, m) => sum + (m.role === 'stocker' ? STOCKER_WAGE_PER_SEC : CASHIER_WAGE_PER_SEC) + m.wageBonus,
+    0
+  );
 
   return (
     <div className="hud-root">
+      <NotificationToasts />
       <div className="hud-top">
         <button className="hud-action-btn" onClick={() => setView('city')}>
           ⬅ City
@@ -190,9 +197,27 @@ export function InteriorHUD() {
               onClick={() => hireStaff('cashier' as StaffRole)}
             />
             {staff.map((m) => (
-              <button key={m.id} className="hud-mode-btn" onClick={() => fireStaff(m.id)}>
-                <span>{m.role === 'stocker' ? '👷' : '🧾'} Fire #{m.id}</span>
-              </button>
+              <div key={m.id} style={{ display: 'flex', gap: 4 }}>
+                <button
+                  className="hud-mode-btn"
+                  style={{ cursor: 'default' }}
+                  title={`${m.role} #${m.id} — level ${m.level}, ${Math.round(m.morale)}% morale`}
+                >
+                  <span>
+                    {m.role === 'stocker' ? '👷' : '🧾'} #{m.id} Lv.{m.level}
+                  </span>
+                  <span className="hud-mode-cost" style={{ color: m.morale < 30 ? '#e0433a' : undefined }}>
+                    {'❤️'} {Math.round(m.morale)}%
+                  </span>
+                </button>
+                <button className="hud-mode-btn" onClick={() => giveRaise(m.id)}>
+                  <span>💰 Raise</span>
+                  <span className="hud-mode-cost">${RAISE_COST}</span>
+                </button>
+                <button className="hud-mode-btn" onClick={() => fireStaff(m.id)}>
+                  <span>❌ Fire</span>
+                </button>
+              </div>
             ))}
           </div>
         </div>

@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import type { PlaceMode } from '../game/types';
 import { COMMERCIAL_COST, INDUSTRIAL_COST, RAIL_COST, ROAD_COST, RESIDENTIAL_COST } from '../game/constants';
+import { BusinessHUD } from './BusinessHUD';
+import { NotificationToasts } from './NotificationToasts';
 
 const MODES: { id: PlaceMode; label: string; cost?: number }[] = [
   { id: 'road', label: '🛣️ Road', cost: ROAD_COST },
@@ -108,11 +111,15 @@ export function HUD() {
   const save = useGameStore((s) => s.save);
   const resetGame = useGameStore((s) => s.resetGame);
   const setView = useGameStore((s) => s.setView);
+  const [showBusiness, setShowBusiness] = useState(false);
 
   const stockRatio = maxStock > 0 ? stock / maxStock : 0;
 
   return (
     <div className="hud-root">
+      <NotificationToasts />
+      {showBusiness && <BusinessHUD onClose={() => setShowBusiness(false)} />}
+
       <div className="hud-top">
         <div className="hud-stat">
           <span className="hud-stat-label">Money</span>
@@ -167,6 +174,9 @@ export function HUD() {
         <div className="hud-actions">
           <button className="hud-action-btn" onClick={() => setView('store')}>
             🏬 Manage Store
+          </button>
+          <button className="hud-action-btn" onClick={() => setShowBusiness(true)}>
+            📊 Business
           </button>
           <button className="hud-action-btn" onClick={() => save()}>
             💾 Save
